@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::{read_to_string, File};
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -10,8 +11,22 @@ type Word = [char; N_LETTERS];
 
 fn main() {
     let database = load_database();
-    //dbg!(database.len());
-    dbg!(database);
+
+    let mut n_wins = 0;
+    let mut n_losses = 0;
+    let mut n_exhausts = 0;
+    
+    for &word in &database {
+        let result = play_against_self(&database, word);
+        match result {
+            Some(GameResult::Loss) => n_losses += 1,
+            Some(GameResult::Win) => n_wins += 1,
+            None => n_exhausts += 1,
+            _ => (),
+        }
+    }
+
+    dbg!(n_wins, n_losses, n_exhausts);
 }
 
 fn load_database() -> Vec<Word> {
@@ -184,5 +199,85 @@ mod tests {
             attempt(&mut game_fork, "binks"),
             GameResult::Loss,
         );
+    }
+}
+
+struct Solver {
+    must_avoid: HashSet<char>,
+    must_contain: HashSet<char>,
+    correct: [Option<char>; N_LETTERS],
+}
+
+impl Solver {
+    fn new() -> Self {
+        Self {
+            must_avoid: HashSet::new(),
+            must_contain: HashSet::new(),
+            correct: [None; N_LETTERS],
+        }
+    }
+
+    fn suggest(&self, dictionary: &[Word]) -> Vec<usize> {
+        let mut suggestions = vec![];
+        'words: for (idx, word) in dictionary.iter().enumerate() {
+            for letter in &self.must_contain {
+                if !word.contains(&letter) {
+                    continue 'words;
+                }
+
+            }
+
+            for letter in &self.must_avoid {
+                if word.contains(&letter) {
+                    continue 'words;
+                }
+            }
+
+            for (c, w) in self.correct.iter().zip(word) {
+                if let Some(c) = c {
+                    if w != c {
+                        continue 'words;
+                    }
+                }
+            }
+
+            suggestions.push(idx);
+        }
+
+        suggestions 
+    }
+
+    fn inform(&mut self, result: [LetterResult; N_LETTERS], word: Word) {
+        //dbg!(&self.must_avoid, &self.must_contain, &self.correct);
+        for (i, r) in result.iter().enumerate() {
+            let c = word[i];
+            match r {
+                LetterResult::Correct => {
+                    self.must_contain.insert(c);
+                    self.correct[i] = Some(c);
+                },
+                LetterResult::Misplaced => {
+                    self.must_contain.insert(c);
+                },
+                LetterResult::NonMember => {
+                    self.must_avoid.insert(c);
+                }
+            }
+        }
+    }
+}
+
+fn play_against_self(dictionary: &[Word], word: Word) -> Option<GameResult> {
+    let mut game = Game::new(word);
+    let mut solver = Solver::new();
+    let mut play = str_to_word("fovea").unwrap(); // TODO: Replace with word containing most common chars from the dictionary!
+    loop {
+        let result = game.attempt(play);
+        match result {
+            GameResult::Miss(result) => solver.inform(result, play),
+            other => break Some(other),
+        }
+        let suggestions = solver.suggest(dictionary);
+        play = suggestions.get(0).map(|&i| dictionary[i])?;
     }
 }
