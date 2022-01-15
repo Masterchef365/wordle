@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::fs::{read_to_string, File};
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -11,6 +11,7 @@ type Word = [char; N_LETTERS];
 
 fn main() {
     let database = load_database();
+    //dbg!(play_against_self(&database, str_to_word("panic").unwrap()));
 
     let mut n_wins = 0;
     let mut n_losses = 0;
@@ -203,16 +204,16 @@ mod tests {
 }
 
 struct Solver {
-    must_avoid: HashSet<char>,
-    must_contain: HashSet<char>,
+    non_members: HashSet<char>,
+    misplaced: HashMap<char, HashSet<usize>>,
     correct: [Option<char>; N_LETTERS],
 }
 
 impl Solver {
     fn new() -> Self {
         Self {
-            must_avoid: HashSet::new(),
-            must_contain: HashSet::new(),
+            non_members: HashSet::new(),
+            misplaced: HashMap::new(),
             correct: [None; N_LETTERS],
         }
     }
@@ -220,14 +221,21 @@ impl Solver {
     fn suggest(&self, dictionary: &[Word]) -> Vec<usize> {
         let mut suggestions = vec![];
         'words: for (idx, word) in dictionary.iter().enumerate() {
-            for letter in &self.must_contain {
-                if !word.contains(&letter) {
+            for letter in self.misplaced.keys() {
+                if !word.contains(letter) {
                     continue 'words;
                 }
-
             }
 
-            for letter in &self.must_avoid {
+            for (idx, letter) in word.iter().enumerate() {
+                if let Some(positions) = self.misplaced.get(letter) {
+                    if positions.contains(&idx) {
+                        continue 'words;
+                    }
+                }
+            }
+
+            for letter in &self.non_members {
                 if word.contains(&letter) {
                     continue 'words;
                 }
@@ -253,14 +261,14 @@ impl Solver {
             let c = word[i];
             match r {
                 LetterResult::Correct => {
-                    self.must_contain.insert(c);
+                    self.misplaced.entry(c).or_default();
                     self.correct[i] = Some(c);
                 },
                 LetterResult::Misplaced => {
-                    self.must_contain.insert(c);
+                    self.misplaced.entry(c).or_default().insert(i);
                 },
                 LetterResult::NonMember => {
-                    self.must_avoid.insert(c);
+                    self.non_members.insert(c);
                 }
             }
         }
@@ -270,9 +278,11 @@ impl Solver {
 fn play_against_self(dictionary: &[Word], word: Word) -> Option<GameResult> {
     let mut game = Game::new(word);
     let mut solver = Solver::new();
-    let mut play = str_to_word("fovea").unwrap(); // TODO: Replace with word containing most common chars from the dictionary!
+    let mut play = str_to_word("acorn").unwrap(); // TODO: Replace with word containing most common chars from the dictionary!
     loop {
+        //dbg!(play);
         let result = game.attempt(play);
+        //dbg!(result);
         match result {
             GameResult::Miss(result) => solver.inform(result, play),
             other => break Some(other),
