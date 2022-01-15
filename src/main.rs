@@ -42,6 +42,7 @@ fn load_database() -> Vec<Word> {
         .collect()
 }
 
+#[derive(Copy, Clone, PartialEq, Debug)]
 struct Game {
     word: Word,
     attempts: usize,
@@ -122,9 +123,9 @@ mod tests {
     fn test_game() {
         let word = str_to_word("panic").unwrap();
         let mut game = Game::new(word);
-        let mut attempt = |s: &str| game.attempt(str_to_word(s).unwrap());
+        let mut attempt = |game: &mut Game, s: &str| game.attempt(str_to_word(s).unwrap());
         assert_eq!(
-            attempt("fovea"),
+            attempt(&mut game, "fovea"),
             GameResult::Miss([
                 Lr::NonMember,
                 Lr::NonMember,
@@ -134,7 +135,7 @@ mod tests {
             ])
         );
         assert_eq!(
-            attempt("grads"),
+            attempt(&mut game, "grads"),
             GameResult::Miss([
                 Lr::NonMember,
                 Lr::NonMember,
@@ -144,7 +145,7 @@ mod tests {
             ])
         );
         assert_eq!(
-            attempt("quack"),
+            attempt(&mut game, "quack"),
             GameResult::Miss([
                 Lr::NonMember,
                 Lr::NonMember,
@@ -154,7 +155,7 @@ mod tests {
             ])
         );
         assert_eq!(
-            attempt("tacit"),
+            attempt(&mut game, "tacit"),
             GameResult::Miss([
                 Lr::NonMember,
                 Lr::Correct,
@@ -164,7 +165,7 @@ mod tests {
             ])
         );
         assert_eq!(
-            attempt("manic"),
+            attempt(&mut game, "manic"),
             GameResult::Miss([
                 Lr::NonMember,
                 Lr::Correct,
@@ -173,9 +174,15 @@ mod tests {
                 Lr::Correct,
             ])
         );
+        let mut game_fork = game.clone();
         assert_eq!(
-            attempt("panic"),
+            attempt(&mut game, "panic"),
             GameResult::Win,
+        );
+
+        assert_eq!(
+            attempt(&mut game_fork, "binks"),
+            GameResult::Loss,
         );
     }
 }
