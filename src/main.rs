@@ -9,7 +9,58 @@ const MAX_ATTEMPTS: usize = 6;
 
 type Word = [char; N_LETTERS];
 
+fn letter_idx(c: char) -> usize {
+    c as usize - 'A' as usize
+}
+
+fn calc_optimal_first_word(dict: &[Word]) -> Word {
+    let mut letter_hist = [0u64; 26];
+
+    for word in dict {
+        for letter in word {
+            if ('A'..='Z').contains(letter) {
+                letter_hist[letter_idx(*letter)] += 1;
+            } else {
+                panic!("Wrong letter {}", letter);
+            }
+        }
+    }
+
+    let mut best_word = dict[0];
+    let mut best_score = 0;
+
+    for word in dict {
+        let mut letter_used = [false; 26];
+        let mut repeats = 1;
+        let mut total = 0;
+        for letter in word {
+            let idx = letter_idx(*letter);
+            if letter_used[idx] {
+                repeats += 1;
+            }
+
+            total += letter_hist[idx];
+
+            letter_used[idx] = true;
+        }
+
+        let score = total / repeats;
+
+        if score > best_score {
+            best_score = score;
+            best_word = *word;
+        }
+    }
+
+    best_word
+}
+
 fn main() {
+    let database = load_database();
+    dbg!(calc_optimal_first_word(&database));
+}
+
+fn pmain() {
     let database = load_database();
     //dbg!(play_against_self(&database, str_to_word("panic").unwrap()));
 
@@ -17,7 +68,7 @@ fn main() {
     let mut n_losses = 0;
     let mut n_exhausts = 0;
     
-    for &word in &database {
+    for (idx, &word) in database.iter().enumerate() {
         let result = play_against_self(&database, word);
         match result {
             Some(GameResult::Loss) => n_losses += 1,
@@ -25,8 +76,11 @@ fn main() {
             None => n_exhausts += 1,
             _ => (),
         }
-    }
 
+        if idx % 1000 == 0 {
+            dbg!(idx, n_wins, n_losses, n_exhausts);
+        }
+    }
     dbg!(n_wins, n_losses, n_exhausts);
 }
 
@@ -122,6 +176,10 @@ fn str_to_word(s: &str) -> Option<Word> {
     let mut word = [char::REPLACEMENT_CHARACTER; N_LETTERS];
     let s = s.to_uppercase(); // TODO: Don't allocate!
     if s.chars().count() != N_LETTERS {
+        return None;
+    }
+
+    if s.chars().any(|c| !('A'..='Z').contains(&c)) {
         return None;
     }
 
