@@ -7,92 +7,9 @@ use std::str::FromStr;
 const N_LETTERS: usize = 5;
 const MAX_ATTEMPTS: usize = 6;
 
-type Word = [char; N_LETTERS];
+pub type Word = [char; N_LETTERS];
 
-fn letter_idx(c: char) -> usize {
-    c as usize - 'A' as usize
-}
-
-fn calc_optimal_first_word(dict: &[Word]) -> Word {
-    let mut letter_hists = [[0u64; 26]; 5];
-
-    for word in dict {
-        for (slot, letter) in word.iter().enumerate() {
-            if ('A'..='Z').contains(letter) {
-                letter_hists[slot][letter_idx(*letter)] += 1;
-            } else {
-                panic!("Wrong letter {}", letter);
-            }
-        }
-    }
-
-    /*
-    let mut k: Vec<(usize, u64)> = letter_hist.iter().copied().enumerate().collect();
-    k.sort_by_key(|(_, count)| *count);
-    for (idx, count) in k {
-        dbg!((char::from('A' as u8 + idx as u8), count));
-    }
-    */
-
-    let mut best_word = dict[0];
-    let mut best_score = 0;
-
-    for word in dict {
-        let mut letter_used = [false; 26];
-        let mut repeats = 1;
-        let mut total = 0;
-        for (slot, letter) in word.iter().enumerate() {
-            let idx = letter_idx(*letter);
-            if letter_used[idx] {
-                repeats += 1;
-            }
-
-            total += letter_hists[slot][idx];
-
-            letter_used[idx] = true;
-        }
-
-        let score = total / repeats;
-
-        if score > best_score {
-            best_score = score;
-            best_word = *word;
-        }
-    }
-
-    best_word
-}
-
-fn main() {
-    let database = load_database();
-    dbg!(calc_optimal_first_word(&database));
-}
-
-fn pmain() {
-    let database = load_database();
-    //dbg!(play_against_self(&database, str_to_word("panic").unwrap()));
-
-    let mut n_wins = 0;
-    let mut n_losses = 0;
-    let mut n_exhausts = 0;
-    
-    for (idx, &word) in database.iter().enumerate() {
-        let result = play_against_self(&database, word);
-        match result {
-            Some(GameResult::Loss) => n_losses += 1,
-            Some(GameResult::Win) => n_wins += 1,
-            None => n_exhausts += 1,
-            _ => (),
-        }
-
-        if idx % 1000 == 0 {
-            dbg!(idx, n_wins, n_losses, n_exhausts);
-        }
-    }
-    dbg!(n_wins, n_losses, n_exhausts);
-}
-
-fn load_database() -> Vec<Word> {
+pub fn load_database() -> Vec<Word> {
     let database_path = Path::new("database.txt");
 
     let database_path: PathBuf = if database_path.is_file() {
@@ -113,28 +30,28 @@ fn load_database() -> Vec<Word> {
         }
     };
 
-    read_to_string(database_path)
+    dbg!(read_to_string(database_path)
         .expect("Failed to load database")
         .lines()
         .filter_map(str_to_word)
-        .collect()
+        .collect())
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-struct Game {
+pub struct Game {
     word: Word,
     attempts: usize,
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-enum LetterResult {
+pub enum LetterResult {
     Correct,
     Misplaced,
     NonMember,
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-enum GameResult {
+pub enum GameResult {
     Win,
     Miss([LetterResult; N_LETTERS]),
     Loss,
@@ -269,7 +186,8 @@ mod tests {
     }
 }
 
-struct Solver {
+// TODO: In ties, prefer words which have letters that are more common! (Like the best starting word solver)
+pub struct Solver {
     non_members: HashSet<char>,
     misplaced: HashMap<char, HashSet<usize>>,
     correct: [Option<char>; N_LETTERS],
@@ -341,10 +259,10 @@ impl Solver {
     }
 }
 
-fn play_against_self(dictionary: &[Word], word: Word) -> Option<GameResult> {
+pub fn play_against_self(dictionary: &[Word], word: Word) -> Option<GameResult> {
     let mut game = Game::new(word);
     let mut solver = Solver::new();
-    let mut play = str_to_word("acorn").unwrap(); // TODO: Replace with word containing most common chars from the dictionary!
+    let mut play = str_to_word("bares").unwrap(); // TODO: Replace with word containing most common chars from the dictionary!
     loop {
         //dbg!(play);
         let result = game.attempt(play);
@@ -357,3 +275,4 @@ fn play_against_self(dictionary: &[Word], word: Word) -> Option<GameResult> {
         play = suggestions.get(0).map(|&i| dictionary[i])?;
     }
 }
+
