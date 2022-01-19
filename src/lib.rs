@@ -213,12 +213,21 @@ impl Solver {
     pub fn suggest(&self, dictionary: &[Word]) -> Vec<usize> {
         let mut suggestions = vec![];
         'words: for (idx, word) in dictionary.iter().enumerate() {
+            // Make sure the letters aren't in non-members
+            for letter in &self.non_members {
+                if word.contains(&letter) {
+                    continue 'words;
+                }
+            }
+
+            // Ensure the word contains all of the misplaced and correct letters
             for letter in self.misplaced.keys() {
                 if !word.contains(letter) {
                     continue 'words;
                 }
             }
 
+            // Ensure the word does not contain a misplaced letter at the same position
             for (idx, letter) in word.iter().enumerate() {
                 if let Some(positions) = self.misplaced.get(letter) {
                     if positions.contains(&idx) {
@@ -227,12 +236,7 @@ impl Solver {
                 }
             }
 
-            for letter in &self.non_members {
-                if word.contains(&letter) {
-                    continue 'words;
-                }
-            }
-
+            // Ensure correct letters are present in their respective positions
             for (c, w) in self.correct.iter().zip(word) {
                 if let Some(c) = c {
                     if w != c {
@@ -255,7 +259,6 @@ impl Solver {
             let c = word[i];
             match r {
                 LetterResult::Correct => {
-                    self.misplaced.entry(c).or_default();
                     self.correct[i] = Some(c);
                 },
                 LetterResult::Misplaced => {
@@ -270,6 +273,10 @@ impl Solver {
 }
 
 pub fn play_against_self(dictionary: &[Word], word: Word) -> Option<GameResult> {
+    //eprintln!();
+    //eprintln!("##################################################");
+    //eprintln!();
+
     let mut game = Game::new(word);
     let mut solver = Solver::new(dictionary);
     loop {
