@@ -30,11 +30,16 @@ pub fn load_database() -> Vec<Word> {
         }
     };
 
-    read_to_string(database_path)
+    let mut db: Vec<Word> = read_to_string(database_path)
         .expect("Failed to load database")
         .lines()
         .filter_map(str_to_word)
-        .collect()
+        .collect();
+
+    use rand::prelude::*;
+    db.shuffle(&mut rand::thread_rng());
+
+    db
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -97,9 +102,10 @@ pub fn input<T: FromStr>() -> Option<T> {
         .and_then(|line| line.trim().parse().ok())
 }
 
-fn str_to_word(s: &str) -> Option<Word> {
+pub fn str_to_word(s: &str) -> Option<Word> {
     let mut word = [char::REPLACEMENT_CHARACTER; N_LETTERS];
     let s = s.to_uppercase(); // TODO: Don't allocate!
+
     if s.chars().count() != N_LETTERS {
         return None;
     }
@@ -191,11 +197,11 @@ pub struct Solver {
     non_members: HashSet<char>,
     misplaced: HashMap<char, HashSet<usize>>,
     correct: [Option<char>; N_LETTERS],
-    letter_hists: LetterHists,
+    pub letter_hists: LetterHists,
 }
 
 impl Solver {
-    fn new(dictionary: &[Word]) -> Self {
+    pub fn new(dictionary: &[Word]) -> Self {
         Self {
             non_members: HashSet::new(),
             misplaced: HashMap::new(),
@@ -204,7 +210,7 @@ impl Solver {
         }
     }
 
-    fn suggest(&self, dictionary: &[Word]) -> Vec<usize> {
+    pub fn suggest(&self, dictionary: &[Word]) -> Vec<usize> {
         let mut suggestions = vec![];
         'words: for (idx, word) in dictionary.iter().enumerate() {
             for letter in self.misplaced.keys() {
@@ -243,7 +249,7 @@ impl Solver {
         suggestions 
     }
 
-    fn inform(&mut self, result: [LetterResult; N_LETTERS], word: Word) {
+    pub fn inform(&mut self, result: [LetterResult; N_LETTERS], word: Word) {
         //dbg!(&self.must_avoid, &self.must_contain, &self.correct);
         for (i, r) in result.iter().enumerate() {
             let c = word[i];
@@ -283,7 +289,7 @@ pub fn play_against_self(dictionary: &[Word], word: Word) -> Option<GameResult> 
 
 type LetterHists = [[u64; 26]; 5];
 
-fn score_word(word: Word, letter_hists: &LetterHists) -> u64 {
+pub fn score_word(word: Word, letter_hists: &LetterHists) -> u64 {
     let mut letter_used = [false; 26];
     let mut repeats = 1;
     let mut total = 0;
@@ -319,4 +325,8 @@ fn calc_letter_hist(dict: &[Word]) -> LetterHists {
 
 fn letter_idx(c: char) -> usize {
     c as usize - 'A' as usize
+}
+
+pub fn word_to_string(word: Word) -> String {
+    word.iter().collect::<String>()
 }

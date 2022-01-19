@@ -22,5 +22,6 @@ fn main() {
             dbg!(n_wins as f32 / (n_losses + n_wins) as f32);
         }
     }
+
     dbg!(n_wins, n_losses, n_exhausts);
 }
