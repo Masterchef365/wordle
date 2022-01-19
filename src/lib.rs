@@ -267,7 +267,7 @@ impl Solver {
                 },
                 LetterResult::NonMember => {
                     if self.correct[i].is_none() {
-                        if self.misplaced.get(&c).map(|v| v.contains(&i)).unwrap_or(false) {
+                        if self.misplaced.get(&c).map(|v| !v.contains(&i)).unwrap_or(true) {
                             self.non_members.insert(c);
                         }
                     }

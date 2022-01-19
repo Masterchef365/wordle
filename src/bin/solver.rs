@@ -53,8 +53,6 @@ fn main() {
             }
         }
 
-        dbg!(result);
-
         solver.inform(result, word);
     }
 }
