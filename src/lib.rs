@@ -1,5 +1,5 @@
 use std::collections::{HashSet, HashMap};
-use std::fs::{read_to_string, File};
+use std::fs::read_to_string;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -57,7 +57,7 @@ pub enum LetterResult {
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum GameResult {
-    Win,
+    Win(usize),
     Miss([LetterResult; N_LETTERS]),
     Loss,
 }
@@ -82,7 +82,7 @@ impl Game {
         self.attempts += 1;
 
         if result == [LetterResult::Correct; N_LETTERS] {
-            GameResult::Win
+            GameResult::Win(self.attempts)
         } else {
             if self.attempts == MAX_ATTEMPTS {
                 GameResult::Loss
@@ -180,9 +180,9 @@ mod tests {
             ])
         );
         let mut game_fork = game.clone();
-        assert_eq!(
-            attempt(&mut game, "panic"),
-            GameResult::Win,
+        assert!(
+            matches!(attempt(&mut game, "panic"),
+            GameResult::Win(_)),
         );
 
         assert_eq!(
@@ -259,6 +259,7 @@ impl Solver {
             let c = word[i];
             match r {
                 LetterResult::Correct => {
+                    self.misplaced.entry(c).or_default();
                     self.correct[i] = Some(c);
                 },
                 LetterResult::Misplaced => {
