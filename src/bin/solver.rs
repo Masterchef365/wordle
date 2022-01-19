@@ -41,10 +41,10 @@ fn main() {
 
         let mut result = [LetterResult::NonMember; N_LETTERS];
 
-        print!("Green: ");
+        print!("Yellow: ");
         flush();
-        let green = input::<String>().unwrap();
-        for c in green.chars() {
+        let yellow = input::<String>().unwrap().to_uppercase();
+        for c in yellow.chars() {
             for (idx, &letter) in word.iter().enumerate() {
                 if letter == c {
                     result[idx] = LetterResult::Misplaced;
@@ -52,15 +52,13 @@ fn main() {
             }
         }
 
-        print!("Yellow: ");
+        print!("Green: ");
         flush();
-
-        let green = input::<String>().unwrap();
+        let green = input::<String>().unwrap().to_uppercase();
         for c in green.chars() {
             for (idx, &letter) in word.iter().enumerate() {
                 if letter == c {
-                    result[idx] = LetterResult::Misplaced;
-
+                    result[idx] = LetterResult::Correct;
                 }
             }
         }
