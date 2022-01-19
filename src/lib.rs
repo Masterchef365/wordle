@@ -1,4 +1,4 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::HashSet;
 use std::fs::read_to_string;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -194,8 +194,13 @@ mod tests {
 
 // TODO: In ties, prefer words which have letters that are more common! (Like the best starting word solver)
 pub struct Solver {
-    non_members: HashSet<char>,
-    misplaced: HashMap<char, HashSet<usize>>,
+    /// Words cannot contain these letters
+    forbidden: HashSet<char>,
+    /// Words must have these letters
+    must_have: HashSet<char>,
+    /// Letters in the given position cannot match these
+    misplaced: [[bool; 26]; N_LETTERS],
+    /// Words must have these letters in their respective positions
     correct: [Option<char>; N_LETTERS],
     pub letter_hists: LetterHists,
 }
@@ -203,8 +208,9 @@ pub struct Solver {
 impl Solver {
     pub fn new(dictionary: &[Word]) -> Self {
         Self {
-            non_members: HashSet::new(),
-            misplaced: HashMap::new(),
+            must_have: HashSet::new(),
+            forbidden: HashSet::new(),
+            misplaced: [[false; 26]; N_LETTERS],
             correct: [None; N_LETTERS],
             letter_hists: calc_letter_hist(dictionary),
         }
@@ -213,29 +219,6 @@ impl Solver {
     pub fn suggest(&self, dictionary: &[Word]) -> Vec<usize> {
         let mut suggestions = vec![];
         'words: for (idx, word) in dictionary.iter().enumerate() {
-            // Make sure the letters aren't in non-members
-            for letter in &self.non_members {
-                if word.contains(&letter) {
-                    continue 'words;
-                }
-            }
-
-            // Ensure the word contains all of the misplaced and correct letters
-            for letter in self.misplaced.keys() {
-                if !word.contains(letter) {
-                    continue 'words;
-                }
-            }
-
-            // Ensure the word does not contain a misplaced letter at the same position
-            for (idx, letter) in word.iter().enumerate() {
-                if let Some(positions) = self.misplaced.get(letter) {
-                    if positions.contains(&idx) {
-                        continue 'words;
-                    }
-                }
-            }
-
             // Ensure correct letters are present in their respective positions
             for (c, w) in self.correct.iter().zip(word) {
                 if let Some(c) = c {
@@ -245,9 +228,31 @@ impl Solver {
                 }
             }
 
+            // Make sure the word doesn't contain forbidden characters
+            for letter in &self.forbidden {
+                if word.contains(letter) {
+                    continue 'words;
+                }
+            }
+
+            // Ensure the word does not contain misplaced letters in their respective locations
+            for (&letter, misplace) in word.iter().zip(&self.misplaced) {
+                if misplace[letter_idx(letter)] {
+                    continue 'words;
+                }
+            }
+
+            // Make sure the words has all of the letters it must have
+            for must in &self.must_have {
+                if !word.contains(must) {
+                    continue 'words;
+                }
+            }
+
             suggestions.push(idx);
         }
 
+        // Sort by score
         suggestions.sort_by_key(|&word| score_word(dictionary[word], &self.letter_hists));
 
         suggestions 
@@ -255,20 +260,21 @@ impl Solver {
 
     pub fn inform(&mut self, result: [LetterResult; N_LETTERS], word: Word) {
         //dbg!(&self.must_avoid, &self.must_contain, &self.correct);
-        for (i, r) in result.iter().enumerate() {
-            let c = word[i];
+        for (idx, r) in result.iter().enumerate() {
+            let c = word[idx];
             match r {
                 LetterResult::Correct => {
-                    self.misplaced.entry(c).or_default();
-                    self.correct[i] = Some(c);
+                    self.must_have.insert(c);
+                    self.correct[idx] = Some(c);
                 },
                 LetterResult::Misplaced => {
-                    self.misplaced.entry(c).or_default().insert(i);
+                    self.must_have.insert(c);
+                    self.misplaced[idx][letter_idx(c)] = true;
                 },
                 LetterResult::NonMember => {
-                    if self.correct[i].is_none() {
-                        if self.misplaced.get(&c).map(|v| !v.contains(&i)).unwrap_or(true) {
-                            self.non_members.insert(c);
+                    if self.correct[idx].is_none() {
+                        if !self.must_have.contains(&c) {
+                            self.forbidden.insert(c);
                         }
                     }
                 }
