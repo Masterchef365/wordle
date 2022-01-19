@@ -265,7 +265,11 @@ impl Solver {
                     self.misplaced.entry(c).or_default().insert(i);
                 },
                 LetterResult::NonMember => {
-                    self.non_members.insert(c);
+                    if self.correct[i].is_none() {
+                        if !self.misplaced.contains_key(&c) {
+                            self.non_members.insert(c);
+                        }
+                    }
                 }
             }
         }
