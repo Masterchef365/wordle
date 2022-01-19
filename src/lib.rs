@@ -194,14 +194,13 @@ mod tests {
 
 // TODO: In ties, prefer words which have letters that are more common! (Like the best starting word solver)
 pub struct Solver {
-    /// Words cannot contain these letters
-    forbidden: HashSet<char>,
     /// Words must have these letters
     must_have: HashSet<char>,
     /// Letters in the given position cannot match these
     misplaced: [[bool; 26]; N_LETTERS],
     /// Words must have these letters in their respective positions
     correct: [Option<char>; N_LETTERS],
+    /// Letter histograms representative of the dictionary
     pub letter_hists: LetterHists,
 }
 
@@ -209,7 +208,6 @@ impl Solver {
     pub fn new(dictionary: &[Word]) -> Self {
         Self {
             must_have: HashSet::new(),
-            forbidden: HashSet::new(),
             misplaced: [[false; 26]; N_LETTERS],
             correct: [None; N_LETTERS],
             letter_hists: calc_letter_hist(dictionary),
@@ -219,26 +217,16 @@ impl Solver {
     pub fn suggest(&self, dictionary: &[Word]) -> Vec<usize> {
         let mut suggestions = vec![];
         'words: for (idx, word) in dictionary.iter().enumerate() {
-            // Ensure correct letters are present in their respective positions
-            for (c, w) in self.correct.iter().zip(word) {
-                if let Some(c) = c {
-                    if w != c {
+
+            for ((&letter, misplaced), &correct) in word.iter().zip(&self.misplaced).zip(&self.correct) {
+                if let Some(correct) = correct {
+                    if letter != correct {
                         continue 'words;
                     }
-                }
-            }
-
-            // Make sure the word doesn't contain forbidden characters
-            for letter in &self.forbidden {
-                if word.contains(letter) {
-                    continue 'words;
-                }
-            }
-
-            // Ensure the word does not contain misplaced letters in their respective locations
-            for (&letter, misplace) in word.iter().zip(&self.misplaced) {
-                if misplace[letter_idx(letter)] {
-                    continue 'words;
+                } else {
+                    if misplaced[letter_idx(letter)] {
+                        continue 'words;
+                    }
                 }
             }
 
@@ -272,10 +260,8 @@ impl Solver {
                     self.misplaced[idx][letter_idx(c)] = true;
                 },
                 LetterResult::NonMember => {
-                    if self.correct[idx].is_none() {
-                        if !self.must_have.contains(&c) {
-                            self.forbidden.insert(c);
-                        }
+                    for misplaced in &mut self.misplaced {
+                        misplaced[letter_idx(c)] = true;
                     }
                 }
             }
