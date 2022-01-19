@@ -39,29 +39,21 @@ fn main() {
             }
         };
 
+        println!("Word:  {}", word_to_string(word));
+        print!("Reply: ");
+        flush();
+
         let mut result = [LetterResult::NonMember; N_LETTERS];
-
-        print!("Yellow: ");
-        flush();
-        let yellow = input::<String>().unwrap().to_uppercase();
-        for c in yellow.chars() {
-            for (idx, &letter) in word.iter().enumerate() {
-                if letter == c {
-                    result[idx] = LetterResult::Misplaced;
-                }
+        let input = input::<String>().unwrap();
+        for (r, c) in result.iter_mut().zip(input.chars()) {
+            *r = match c {
+                'y' | 'Y' => LetterResult::Misplaced,
+                'g' | 'G' => LetterResult::Correct,
+                _ => LetterResult::NonMember,
             }
         }
 
-        print!("Green: ");
-        flush();
-        let green = input::<String>().unwrap().to_uppercase();
-        for c in green.chars() {
-            for (idx, &letter) in word.iter().enumerate() {
-                if letter == c {
-                    result[idx] = LetterResult::Correct;
-                }
-            }
-        }
+        dbg!(result);
 
         solver.inform(result, word);
     }

@@ -99,7 +99,7 @@ pub fn input<T: FromStr>() -> Option<T> {
         .next()
         .transpose()
         .ok()?
-        .and_then(|line| line.trim().parse().ok())
+        .and_then(|line| line.trim_end_matches('\n').parse().ok())
 }
 
 pub fn str_to_word(s: &str) -> Option<Word> {
@@ -267,7 +267,7 @@ impl Solver {
                 },
                 LetterResult::NonMember => {
                     if self.correct[i].is_none() {
-                        if !self.misplaced.contains_key(&c) {
+                        if self.misplaced.get(&c).map(|v| v.contains(&i)).unwrap_or(false) {
                             self.non_members.insert(c);
                         }
                     }
@@ -299,7 +299,7 @@ pub fn play_against_self(dictionary: &[Word], word: Word) -> Option<GameResult> 
     }
 }
 
-type LetterHists = [[u64; 26]; 5];
+type LetterHists = [[u64; 26]; N_LETTERS];
 
 pub fn score_word(word: Word, letter_hists: &LetterHists) -> u64 {
     let mut letter_used = [false; 26];
@@ -320,7 +320,7 @@ pub fn score_word(word: Word, letter_hists: &LetterHists) -> u64 {
 }
 
 fn calc_letter_hist(dict: &[Word]) -> LetterHists {
-    let mut letter_hists = [[0u64; 26]; 5];
+    let mut letter_hists = [[0u64; 26]; N_LETTERS];
 
     for word in dict {
         for (slot, letter) in word.iter().enumerate() {
