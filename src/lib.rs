@@ -4,8 +4,8 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-const N_LETTERS: usize = 5;
-const MAX_ATTEMPTS: usize = 6;
+pub const N_LETTERS: usize = 5;
+pub const MAX_ATTEMPTS: usize = 6;
 
 pub type Word = [char; N_LETTERS];
 
