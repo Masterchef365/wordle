@@ -266,17 +266,18 @@ impl Solver {
 pub fn play_against_self(dictionary: &[Word], word: Word) -> Option<GameResult> {
     let mut game = Game::new(word);
     let mut solver = Solver::new(dictionary);
-    let mut play = str_to_word("bares").unwrap(); // TODO: Replace with word containing most common chars from the dictionary!
     loop {
+        let suggestions = solver.suggest(dictionary);
+        let play = suggestions.last().map(|&i| dictionary[i])?;
         //dbg!(play);
+
         let result = game.attempt(play);
         //dbg!(result);
+
         match result {
             GameResult::Miss(result) => solver.inform(result, play),
             other => break Some(other),
         }
-        let suggestions = solver.suggest(dictionary);
-        play = suggestions.last().map(|&i| dictionary[i])?;
     }
 }
 
