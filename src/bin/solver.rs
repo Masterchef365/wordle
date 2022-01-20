@@ -5,7 +5,7 @@ fn main() {
     let db = load_database();
     let mut solver = Solver::new(&db);
 
-    loop {
+    for run_idx in 0.. {
         let mut suggestions = solver.suggest(&db);
 
         let word: Word = loop {
@@ -39,7 +39,13 @@ fn main() {
             }
         };
 
+
+        if run_idx == 0 {
+            println!("For each letter below the word, type y, g, or space to indicate yellow, green, or gray");
+        }
+
         println!("Word:  {}", word_to_string(word));
+
         print!("Reply: ");
         flush();
 

@@ -261,7 +261,9 @@ impl Solver {
                 },
                 LetterResult::NonMember => {
                     for misplaced in &mut self.misplaced {
-                        misplaced[letter_idx(c)] = true;
+                        if self.correct[idx].is_none() {
+                            misplaced[letter_idx(c)] = true;
+                        }
                     }
                 }
             }
